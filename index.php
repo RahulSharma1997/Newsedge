@@ -9,39 +9,59 @@
 
     <?php
     // GLOBAL API FETCH - Hum API ko sirf 1 bar top par call karenge taake website fast load ho aur API limit bachi rahe.
-    $api_key = '51e6b14859734b30a38646fbaaad2600';
-    $url = 'https://newsapi.org/v2/top-headlines?country=in&apiKey=' . $api_key . '&pageSize=20'; // Fetch 20 articles at once
+    $api_keys = ['51e6b14859734b30a38646fbaaad2600', '79da4acf3f134d8f94cea28e6a5b9fe1'];
+    
+    $api_ok = false;
+    $global_newsData = [];
+    $global_response = '';
+    $global_curl_err = '';
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'AdssenceApp/1.0');
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
-    $global_response = curl_exec($ch);
-    $global_curl_err = curl_error($ch);
-    curl_close($ch);
+    // Loop lagakar dono keys try karenge
+    foreach ($api_keys as $key) {
+        // Using 'everything' endpoint for more reliable results as 'top-headlines' for 'in' can sometimes return 0 results on the free plan.
+        $url = 'https://newsapi.org/v2/everything?q=india&language=en&sortBy=publishedAt&apiKey=' . $key . '&pageSize=20';
 
-    $global_newsData = json_decode($global_response, true);
-    $api_ok = (isset($global_newsData['status']) && $global_newsData['status'] === 'ok' && !empty($global_newsData['articles']));
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+        $global_response = curl_exec($ch);
+        $global_curl_err = curl_error($ch);
+        curl_close($ch);
 
-    // Helper function to fetch news by category
-    function fetchNewsByCategory($category, $apiKey, $pageSize = 4) {
-        $category_url = "https://newsapi.org/v2/top-headlines?country=in&category=" . urlencode($category) . "&apiKey=" . $apiKey . "&pageSize=" . $pageSize;
+        $global_newsData = json_decode($global_response, true);
         
-        $ch_cat = curl_init();
-        curl_setopt($ch_cat, CURLOPT_URL, $category_url);
-        curl_setopt($ch_cat, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch_cat, CURLOPT_USERAGENT, 'AdssenceApp/1.0');
-        curl_setopt($ch_cat, CURLOPT_SSL_VERIFYPEER, false);
-        $response = curl_exec($ch_cat);
-        curl_close($ch_cat);
-        
-        $data = json_decode($response, true);
-        
-        if (isset($data['status']) && $data['status'] === 'ok' && !empty($data['articles'])) {
-            return $data['articles'];
+        // Agar is key se data mil gaya, toh loop rok dein
+        if (isset($global_newsData['status']) && $global_newsData['status'] === 'ok' && !empty($global_newsData['articles'])) {
+            $api_ok = true;
+            break; 
         }
-        return []; // Return empty array on failure
+    }
+
+    // Helper function to fetch news by category (Isme bhi dono keys try hongi)
+    function fetchNewsByCategory($category, $apiKeysArray, $pageSize = 4) {
+        foreach ($apiKeysArray as $key) {
+            // Using 'everything' endpoint here as well because 'top-headlines' can be unreliable on the free plan.
+            $category_url = "https://newsapi.org/v2/everything?q=" . urlencode("india " . $category) . "&language=en&sortBy=publishedAt&apiKey=" . $key . "&pageSize=" . $pageSize;
+            
+            $ch_cat = curl_init();
+            curl_setopt($ch_cat, CURLOPT_URL, $category_url);
+            curl_setopt($ch_cat, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch_cat, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36');
+            curl_setopt($ch_cat, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch_cat, CURLOPT_SSL_VERIFYPEER, false);
+            $response = curl_exec($ch_cat);
+            curl_close($ch_cat);
+            
+            $data = json_decode($response, true);
+            
+            if (isset($data['status']) && $data['status'] === 'ok' && !empty($data['articles'])) {
+                return $data['articles']; // Success mil jaye to return karden
+            }
+        }
+        return []; // Agar dono keys fail ho jayen tab jaa kar empty return ho
     }
     ?>
     <!-- Add your site or application content here -->
@@ -305,7 +325,7 @@
                                                 </li>';
                                     }
                                 } else {
-                                        $api_msg = isset($global_newsData['message']) ? $global_newsData['message'] : 'No message from API';
+                                        $api_msg = isset($global_newsData['message']) ? $global_newsData['message'] : ($global_response ? 'Raw: ' . htmlspecialchars(substr($global_response, 0, 100)) : 'No data received');
                                         echo '<li><span class="text-danger">Ticker Load Nahi Ho Raha: ' . $api_msg . '</span></li>';
                                 }
                                 ?>
@@ -360,7 +380,7 @@
                         </div>';
                             }
                         } else {
-                            $api_msg = isset($global_newsData['message']) ? $global_newsData['message'] : 'No message from API';
+                            $api_msg = isset($global_newsData['message']) ? $global_newsData['message'] : ($global_response ? 'Raw: ' . htmlspecialchars(substr($global_response, 0, 200)) : 'No data received');
                             echo '<div class="alert alert-danger w-100" style="padding: 15px;"><strong>News Load Nahi Ho Rahi!</strong><br><b>cURL Error:</b> ' . ($global_curl_err ? $global_curl_err : 'None') . '<br><b>API Error:</b> ' . $api_msg . '</div>';
                         }
                         ?>
@@ -1438,7 +1458,7 @@
                                 </div>';
                         }
                     } else {
-                        $api_msg = isset($global_newsData['message']) ? $global_newsData['message'] : 'No message from API';
+                        $api_msg = isset($global_newsData['message']) ? $global_newsData['message'] : ($global_response ? 'Raw: ' . htmlspecialchars(substr($global_response, 0, 200)) : 'No data received');
                         echo '<div class="alert alert-danger w-100" style="padding: 15px;"><strong>News Load Nahi Ho Rahi!</strong><br><b>cURL Error:</b> ' . ($global_curl_err ? $global_curl_err : 'None') . '<br><b>API Error:</b> ' . $api_msg . '</div>';
                     }
                     ?>
@@ -1456,7 +1476,7 @@
                             <div class="topic-box-lg color-apple">Entertainment</div>
                         </div>
                         <?php
-                        $entertainment_news = fetchNewsByCategory('entertainment', $api_key, 4);
+                        $entertainment_news = fetchNewsByCategory('entertainment', $api_keys, 4);
                         if (!empty($entertainment_news)) {
                             $main_article = array_slice($entertainment_news, 0, 1)[0];
                             $sub_articles = array_slice($entertainment_news, 1, 3);
@@ -1507,7 +1527,7 @@
                             <div class="topic-box-lg color-cutty-sark">Tech World</div>
                         </div>
                         <?php
-                        $tech_news = fetchNewsByCategory('technology', $api_key, 4);
+                        $tech_news = fetchNewsByCategory('technology', $api_keys, 4);
                         if (!empty($tech_news)) {
                             $main_article = array_slice($tech_news, 0, 1)[0];
                             $sub_articles = array_slice($tech_news, 1, 3);
@@ -1558,7 +1578,7 @@
                             <div class="topic-box-lg color-web-orange">Business</div>
                         </div>
                         <?php
-                        $business_news = fetchNewsByCategory('business', $api_key, 4);
+                        $business_news = fetchNewsByCategory('business', $api_keys, 4);
                         if (!empty($business_news)) {
                             $main_article = array_slice($business_news, 0, 1)[0];
                             $sub_articles = array_slice($business_news, 1, 3);
