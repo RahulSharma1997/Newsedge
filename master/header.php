@@ -91,16 +91,16 @@
                                                     </ul>
                                                 </li>
                                                 <li>
-                                                    <a href="post-style-1.html">Politics</a>
+                                                    <a href="category-general">Politics</a>
                                                 </li>
                                                 <li>
-                                                    <a href="post-style-2.html">Business</a>
+                                                    <a href="category-business">Business</a>
                                                 </li>
                                                 <li>
-                                                    <a href="post-style-3.html">Sports</a>
+                                                    <a href="category-sports">Sports</a>
                                                 </li>
                                                 <li>
-                                                    <a href="post-style-4.html">Fashion</a>
+                                                    <a href="category-technology">Technology</a>
                                                 </li>
                                             </ul>
                                         </nav>

@@ -1,3 +1,26 @@
+<?php
+// Agar global news data already set nahi hai (jaise single-page.php mein), to footer khud API call karega
+if (!isset($api_ok) || empty($global_newsData['articles'])) {
+    require_once __DIR__ . '/api_keys.php';
+    $api_ok = false;
+    foreach ($api_keys as $key) {
+        $url = "https://newsapi.org/v2/top-headlines?language=en&pageSize=20&apiKey=" . $key;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'NewsEdge/1.0');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        $data = json_decode($response, true);
+        if (isset($data['status']) && $data['status'] === 'ok' && !empty($data['articles'])) {
+            $global_newsData = $data;
+            $api_ok = true;
+            break;
+        }
+    }
+}
+?>
 <!-- Footer Area Start Here -->
             <footer>
                 <div class="footer-area-top">
@@ -7,66 +30,38 @@
                                 <div class="footer-box">
                                     <h2 class="title-bold-light title-bar-left text-uppercase">Most Viewed Posts</h2>
                                     <ul class="most-view-post">
-                                        <li>
-                                            <div class="media">
-                                                <a href="post-style-1.html">
-                                                    <img src="img/footer/post1.jpg" alt="post" class="img-fluid">
-                                                </a>
-                                                <div class="media-body">
-                                                    <h3 class="title-medium-light size-md mb-10">
-                                                        <a href="#">Basketball Stars Face Off itim ate Playoff Beard Battle</a>
-                                                    </h3>
-                                                    <div class="post-date-light">
-                                                        <ul>
-                                                            <li>
-                                                                <span>
-                                                                    <i class="fa fa-calendar" aria-hidden="true"></i>
-                                                                </span>November 11, 2017</li>
-                                                        </ul>
+                                        <?php
+                                        if (isset($api_ok) && $api_ok && !empty($global_newsData['articles'])) {
+                                            $footer_posts = array_slice($global_newsData['articles'], 8, 3);
+                                            foreach ($footer_posts as $article) {
+                                                $title = htmlspecialchars($article['title'] ?? '');
+                                                $slug = trim(preg_replace('/[^a-zA-Z0-9]+/', '-', strtolower($article['title'] ?? '')), '-');
+                                                $newsUrl = 'news-' . $slug;
+                                                $imageUrl = !empty($article['urlToImage']) ? htmlspecialchars($article['urlToImage']) : 'https://picsum.photos/150/150';
+                                                $date = !empty($article['publishedAt']) ? date('F d, Y', strtotime($article['publishedAt'])) : '';
+                                                echo '<li>
+                                                    <div class="media">
+                                                        <a href="' . $newsUrl . '">
+                                                            <img src="' . $imageUrl . '" alt="post" class="img-fluid" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.onerror=null;this.src=\'https://picsum.photos/150/150\';">
+                                                        </a>
+                                                        <div class="media-body">
+                                                            <h3 class="title-medium-light size-md mb-10">
+                                                                <a href="' . $newsUrl . '">' . substr($title, 0, 50) . '...</a>
+                                                            </h3>
+                                                            <div class="post-date-light">
+                                                                <ul>
+                                                                    <li>
+                                                                        <span>
+                                                                            <i class="fa fa-calendar" aria-hidden="true"></i>
+                                                                        </span>' . $date . '</li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <div class="media">
-                                                <a href="post-style-2.html">
-                                                    <img src="img/footer/post2.jpg" alt="post" class="img-fluid">
-                                                </a>
-                                                <div class="media-body">
-                                                    <h3 class="title-medium-light size-md mb-10">
-                                                        <a href="#">Basketball Stars Face Off in ate Playoff Beard Battle</a>
-                                                    </h3>
-                                                    <div class="post-date-light">
-                                                        <ul>
-                                                            <li>
-                                                                <span>
-                                                                    <i class="fa fa-calendar" aria-hidden="true"></i>
-                                                                </span>August 22, 2017</li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li>
-                                            <div class="media">
-                                                <a href="post-style-3.html">
-                                                    <img src="img/footer/post3.jpg" alt="post" class="img-fluid">
-                                                </a>
-                                                <div class="media-body">
-                                                    <h3 class="title-medium-light size-md mb-10">
-                                                        <a href="#">Basketball Stars Face tim ate Playoff Battle</a>
-                                                    </h3>
-                                                    <div class="post-date-light">
-                                                        <ul>
-                                                            <li>
-                                                                <span>
-                                                                    <i class="fa fa-calendar" aria-hidden="true"></i>
-                                                                </span>March 31, 2017</li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </li>
+                                                </li>';
+                                            }
+                                        }
+                                        ?>
                                     </ul>
                                 </div>
                             </div>
@@ -121,69 +116,23 @@
                                 <div class="footer-box">
                                     <h2 class="title-bold-light title-bar-left text-uppercase">Post Gallery</h2>
                                     <ul class="post-gallery shine-hover ">
-                                        <li>
-                                            <a href="gallery-style1.html">
-                                                <figure>
-                                                    <img src="img/footer/post4.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style2.html">
-                                                <figure>
-                                                    <img src="img/footer/post5.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style1.html">
-                                                <figure>
-                                                    <img src="img/footer/post6.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style2.html">
-                                                <figure>
-                                                    <img src="img/footer/post7.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style1.html">
-                                                <figure>
-                                                    <img src="img/footer/post8.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style2.html">
-                                                <figure>
-                                                    <img src="img/footer/post9.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style1.html">
-                                                <figure>
-                                                    <img src="img/footer/post10.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style2.html">
-                                                <figure>
-                                                    <img src="img/footer/post11.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="gallery-style1.html">
-                                                <figure>
-                                                    <img src="img/footer/post12.jpg" alt="post" class="img-fluid">
-                                                </figure>
-                                            </a>
-                                        </li>
+                                        <?php
+                                        if (isset($api_ok) && $api_ok && !empty($global_newsData['articles'])) {
+                                            $footer_gallery = array_slice($global_newsData['articles'], 11, 9);
+                                            foreach ($footer_gallery as $article) {
+                                                $slug = trim(preg_replace('/[^a-zA-Z0-9]+/', '-', strtolower($article['title'] ?? '')), '-');
+                                                $newsUrl = 'news-' . $slug;
+                                                $imageUrl = !empty($article['urlToImage']) ? htmlspecialchars($article['urlToImage']) : 'https://picsum.photos/150/150';
+                                                echo '<li>
+                                                    <a href="' . $newsUrl . '">
+                                                        <figure>
+                                                            <img src="' . $imageUrl . '" alt="post" class="img-fluid" style="width: 100px; height: 80px; object-fit: cover;" onerror="this.onerror=null;this.src=\'https://picsum.photos/150/150\';">
+                                                        </figure>
+                                                    </a>
+                                                </li>';
+                                            }
+                                        }
+                                        ?>
                                     </ul>
                                 </div>
                             </div>
@@ -398,6 +347,24 @@
                 </div>
             </div>
             <!-- Offcanvas Menu End -->
+
+        <!-- Global Preloader Start -->
+        <div id="global-loader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 99999; display: flex; align-items: center; justify-content: center;">
+            <!-- Replace this inner HTML with your actual loader design -->
+            <i class="fa fa-spinner fa-spin fa-4x" style="color: #e74c3c;"></i>
+        </div>
+        <script>
+            window.addEventListener('load', function() {
+                var loader = document.getElementById('global-loader');
+                if (loader) {
+                    loader.style.transition = 'opacity 0.5s ease';
+                    loader.style.opacity = '0';
+                    setTimeout(function() { loader.style.display = 'none'; }, 500);
+                }
+            });
+        </script>
+        <!-- Global Preloader End -->
+
         </div>
         <!-- jquery-->
         <script src="js/jquery-2.2.4.min.js" type="text/javascript"></script>

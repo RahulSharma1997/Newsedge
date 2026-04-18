@@ -1,0 +1,6 @@
+RewriteEngine On
+# Agar file ya folder physically exist nahi karta, tabhi rewrite rule apply ho
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^news-([a-zA-Z0-9-]+)$ single-page.php?title=$1 [L,QSA]
+RewriteRule ^category-([a-zA-Z0-9-]+)$ single-category.php?cat=$1 [L,QSA]
